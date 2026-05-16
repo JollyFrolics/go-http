@@ -26,6 +26,8 @@ func ParseFlag() (state server.ServerState, err error) {
 		Address:          fmt.Sprintf("%v:%v", *addressFlag, *portFlag),
 		WorkingDirectory: os.DirFS(*workingDirectoryFlag),
 		Debug:            *debugModeFlag,
+		MaxPackageSize: 1 << 12,
+		HeaderSize: 1000,
 	}
 
 	return state, nil

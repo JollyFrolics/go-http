@@ -1,7 +1,7 @@
 package main
 
 import (
-	"os"
+	"log"
 	"protocol/http/cli"
 	"protocol/http/server"
 )
@@ -10,7 +10,7 @@ func main() {
 	serverState, err := cli.ParseFlag()
 
 	if err != nil {
-		os.Exit(1)
+		log.Fatal(err.Error())
 	}
 
 	server.HTTPStart(serverState)
