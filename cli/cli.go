@@ -7,7 +7,7 @@ import (
 	"io/fs"
 	"log"
 	"os"
-	"protocol/http/server"
+	"protocol/http"
 )
 
 func ParseFlag() (state server.ServerState, err error) {
@@ -15,6 +15,7 @@ func ParseFlag() (state server.ServerState, err error) {
 	addressFlag := flag.String("address", "", "The address of bind to")
 	workingDirectoryFlag := flag.String("dir", ".", "The directory to expose")
 	debugModeFlag := flag.Bool("debug", false, "Set debug mode")
+	protocolFlag := flag.String("protocol", "http1.1", "The protocol the server will run")
 
 	flag.Parse()
 
@@ -27,7 +28,7 @@ func ParseFlag() (state server.ServerState, err error) {
 		WorkingDirectory: os.DirFS(*workingDirectoryFlag),
 		Debug:            *debugModeFlag,
 		MaxPackageSize: 1 << 12,
-		HeaderSize: 1000,
+		MaxHeaderSize: 1000,
 	}
 
 	return state, nil
