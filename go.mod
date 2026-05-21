@@ -1,4 +1,4 @@
-module protocol/http
+module protocol
 
 go 1.26.2
 
