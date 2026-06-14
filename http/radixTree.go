@@ -1,6 +1,6 @@
 package http
 
-import "strings"
+import "log"
 
 type NodeType uint8
 
@@ -25,10 +25,7 @@ type RadixNode struct {
 
 	Data any
 
-	Child   []*RadixNode
-	Indices string
-
-	Priority int32
+	Child map[byte]*RadixNode
 }
 
 func findWildcard(s string) (path string, i int) {
@@ -64,6 +61,7 @@ func findWildcard(s string) (path string, i int) {
 }
 
 func (r *RadixNode) addRoute(path string, data any) {
+	fullPath := path
 	curr := r
 
 	for {
@@ -72,13 +70,22 @@ func (r *RadixNode) addRoute(path string, data any) {
 		if index < 0 {
 			curr.insert(path, data)
 			curr.Type = Static
-			return
+			curr.Child = make(map[byte]*RadixNode)
+			break
 		}
 
 		if wildcard[0] == ':' {
+			if curr.Child[':'] != nil {
+				log.Panic("Can't have two param in the same place" + curr.Child[':'].Prefix + ", " + wildcard + "at path: " + fullPath)
+			}
 
+			curr = curr.insert(wildcard[1:], nil)
+				curr.Type = Static
+			continue
 		}
+
 	}
+	curr.Data = data
 }
 
 func (r *RadixNode) insert(p string, data any) *RadixNode {
