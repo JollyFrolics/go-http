@@ -68,7 +68,7 @@ func (connection *ConnectionInfo) HTTPParseHeader(server *ServerState) error {
 
 		headerByte += len(line)
 
-		if int64(headerByte) >= server.MaxHeaderSize {
+		if headerByte >= server.MaxHeaderSize {
 			return errors.New("Max header size exceeded by" + line)
 		}
 

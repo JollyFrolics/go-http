@@ -6,7 +6,7 @@ import (
 )
 
 func TestRadixNode_addRoute(t *testing.T) {
-	tree := RadixNode{}
+	tree := &RadixNode{}
 	_ = tree.insert("", 100)
 
 	curr := tree.insert("/", 100)
@@ -19,11 +19,11 @@ func TestRadixNode_addRoute(t *testing.T) {
 		t.Error(colorize.Error("Expected data of 100 got"), curr.Data)
 	}
 
-	if tree.Child['/'] != curr {
+	if tree != curr {
 		t.Error(colorize.Error("Expected the map of the \"/\" to be the one returned from insert call wasn't"))
 	}
 
-	if tree.Child['/'].Data != 100 {
+	if tree.Data != 100 {
 		t.Error(colorize.Error("Expected data of 100 got"), curr.Data)
 	}
 
@@ -33,12 +33,12 @@ func TestRadixNode_addRoute(t *testing.T) {
 		t.Error(colorize.Error("Expected data of 200 got"), curr.Data)
 	}
 
-	if tree.Child['/'].Data != 100 {
+	if tree.Data != 100 {
 		t.Error(colorize.Error("Expected data of 100 got"), curr.Data)
 	}
 
-	if tree.Child['/'].Child['h'] != curr {
-		t.Error(colorize.Error("Expected maping to result in /home didn't"), curr)
+	if tree.Child['h'] != curr {
+		t.Error(colorize.Error("Expected maping to result in home got: "), curr)
 	}
 
 	curr = tree.insert("/home", 100)
@@ -47,12 +47,12 @@ func TestRadixNode_addRoute(t *testing.T) {
 		t.Error(colorize.Error("Expected data of 100 got"), curr.Data)
 	}
 
-	if tree.Child['/'].Data != 100 {
+	if tree.Data != 100 {
 		t.Error(colorize.Error("Expected data of 100 got"), curr.Data)
 	}
 
-	if tree.Child['/'].Child['h'] != curr {
-		t.Error(colorize.Error("Expected maping to result in /home didn't"), curr)
+	if tree.Child['/'] != curr {
+		t.Error(colorize.Error("Expected maping to result in /home got: "), curr)
 	}
 
 	curr = tree.insert("/home", 200)
@@ -62,19 +62,19 @@ func TestRadixNode_addRoute(t *testing.T) {
 		t.Error(colorize.Error("Expected data of 300 got"), curr.Data)
 	}
 
-	if tree.Child['/'].Data != 100 {
+	if tree.Data != 100 {
 		t.Error(colorize.Error("Expected data of 100 got"), curr.Data)
 	}
 
-	if tree.Child['/'].Child['h'].Child['o'].Data != 200 {
+	if tree.Child['o'].Data != 200 {
 		t.Error(colorize.Error("Expected data of 200 got"), curr.Data)
 	}
 
-	if tree.Child['/'].Child['h'].Child['i'].Data != 300 {
+	if tree.Child['i'].Data != 300 {
 		t.Error(colorize.Error("Expected data of 300 got"), curr.Data)
 	}
 
-	if tree.Child['/'].Child['h'].Child['i'] != curr {
+	if tree.Child['i'] != curr {
 		t.Error(colorize.Error("Mapping of /, h, i is incorrect"), curr.Data)
 	}
 }

@@ -98,12 +98,69 @@ func (r *RadixNode) insert(p string, data any) *RadixNode {
 
 	if curr.Prefix == "" && curr.Child == nil {
 		curr.Prefix = p
+		curr.Data = data
 		return curr
 	}
 
 	for {
-		
+		splitPoint := longestCommonPrefix(curr.Prefix, p)
+
+		if splitPoint < len(curr.Prefix) {
+			// TODO: SplitNode
+			splitNode := &RadixNode{
+				Prefix:   curr.Prefix[splitPoint:],
+				Data:     curr.Data,
+				FullPath: curr.FullPath,
+				Child:    curr.Child,
+				Type:     curr.Type,
+			}
+
+			curr.Child = make(map[byte]*RadixNode)
+			curr.Child[curr.Prefix[splitPoint]] = splitNode
+			curr.Prefix = curr.Prefix[:splitPoint]
+
+			newNode := &RadixNode{
+				Prefix: p[splitPoint:],
+				Data:   data,
+			}
+			curr.Child[p[splitPoint]] = newNode
+			return newNode
+		}
+
+		newNode := curr.Child[p[splitPoint]]
+
+		if newNode == nil {
+			newNode = &RadixNode{
+				Prefix: p[splitPoint:],
+				Data:   data,
+			}
+
+			if curr.Child == nil {
+				curr.Child = make(map[byte]*RadixNode)
+			}
+
+			curr.Child[p[splitPoint]] = newNode
+			return newNode
+		}
+
+		p = p[splitPoint+1:]
+		curr = newNode
 	}
+}
+
+func longestCommonPrefix(s, p string) int {
+	min := len(p)
+	if len(s) < min {
+		min = len(s)
+	}
+
+	i := 0
+	for ; i < min && s[i] == p[i]; i++ {
+		if s[i] != p[i] {
+			break
+		}
+	}
+	return i
 }
 
 func (r *RadixNode) lookup(p string) (data any) {
