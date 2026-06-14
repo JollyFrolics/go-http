@@ -50,7 +50,7 @@ func findWildcard(s string) (path string, i int) {
 			case '/':
 				return s[start : start+end+1], start
 			case ':', '*':
-				panic("Only one wild card is allowed per path segment. Multiple in path: " + s)
+				panic("Only one wild card is allowed per path segment. Multiple in the path: " + s)
 			}
 		}
 		return s[start:], start
@@ -75,21 +75,35 @@ func (r *RadixNode) addRoute(path string, data any) {
 		}
 
 		if wildcard[0] == ':' {
+			// It already has a param ':' in the route
 			if curr.Child[':'] != nil {
 				log.Panic("Can't have two param in the same place" + curr.Child[':'].Prefix + ", " + wildcard + "at path: " + fullPath)
 			}
 
 			curr = curr.insert(wildcard[1:], nil)
-				curr.Type = Static
+			curr.Type = Param
+
+			path = path[len(wildcard):]
+
 			continue
 		}
 
 	}
+	curr.FullPath = fullPath
 	curr.Data = data
 }
 
 func (r *RadixNode) insert(p string, data any) *RadixNode {
-	panic("Unimplemented")
+	curr := r
+
+	if curr.Prefix == "" && curr.Child == nil {
+		curr.Prefix = p
+		return curr
+	}
+
+	for {
+		
+	}
 }
 
 func (r *RadixNode) lookup(p string) (data any) {
