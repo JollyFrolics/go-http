@@ -1,6 +1,10 @@
 package http
 
-import "log"
+import (
+	"errors"
+	"log"
+	"strings"
+)
 
 type NodeType uint8
 
@@ -11,7 +15,6 @@ type ProtocolContext struct {
 
 const (
 	Static NodeType = iota
-	Root
 	Param
 	Catch_all
 )
@@ -31,7 +34,7 @@ type RadixNode struct {
 func findWildcard(s string) (path string, i int) {
 	escape := false
 
-	for start, token := range []byte(path) {
+	for start, token := range []byte(s) {
 
 		if escape {
 			escape = false
@@ -45,7 +48,7 @@ func findWildcard(s string) (path string, i int) {
 			continue
 		}
 
-		for end, token := range []byte(path[start+1:]) {
+		for end, token := range []byte(s[start+1:]) {
 			switch token {
 			case '/':
 				return s[start : start+end+1], start
@@ -65,6 +68,10 @@ func (r *RadixNode) addRoute(path string, data any) {
 	curr := r
 
 	for {
+		if len(path) == 0 {
+			return
+		}
+
 		wildcard, index := findWildcard(path)
 
 		if index < 0 {
@@ -74,31 +81,63 @@ func (r *RadixNode) addRoute(path string, data any) {
 			break
 		}
 
+		if index > 1 {
+			curr = curr.insert(path[:index], nil)
+			curr.Type = Static
+		}
+
 		if wildcard[0] == ':' {
 			// It already has a param ':' in the route
 			if curr.Child[':'] != nil {
 				log.Panic("Can't have two param in the same place" + curr.Child[':'].Prefix + ", " + wildcard + "at path: " + fullPath)
 			}
 
-			curr = curr.insert(wildcard[1:], nil)
-			curr.Type = Param
+			curr.Child[':'] = &RadixNode{
+				Type:   Param,
+				Prefix: wildcard[1:],
+				Child:  make(map[byte]*RadixNode),
+			}
 
-			path = path[len(wildcard):]
+			curr = curr.Child[':']
+
+			path = path[index+len(wildcard):]
 
 			continue
 		}
+
+		if curr.Child['*'] != nil {
+			log.Panic("Can't have two catch all in the same place" + curr.Child[':'].Prefix + ", " + wildcard + "at path: " + fullPath)
+		}
+
+		curr.Child['*'] = &RadixNode{
+			Type:   Catch_all,
+			Prefix: wildcard[1:],
+			Child:  make(map[byte]*RadixNode),
+		}
+
+		if index+len(wildcard) != len(path) {
+			log.Panicln("Wildcard should be the last element of the path")
+		}
+
+		break
 
 	}
 	curr.FullPath = fullPath
 	curr.Data = data
 }
 
-func (r *RadixNode) insert(p string, data any) *RadixNode {
+func (r *RadixNode) insert(path string, data any) *RadixNode {
 	curr := r
+	p := path
+
+	if p == "" {
+		log.Panicln("Error: empty string can't be inserted")
+	}
 
 	if curr.Prefix == "" && curr.Child == nil {
 		curr.Prefix = p
 		curr.Data = data
+		curr.Child = make(map[byte]*RadixNode)
 		return curr
 	}
 
@@ -118,13 +157,26 @@ func (r *RadixNode) insert(p string, data any) *RadixNode {
 			curr.Child = make(map[byte]*RadixNode)
 			curr.Child[curr.Prefix[splitPoint]] = splitNode
 			curr.Prefix = curr.Prefix[:splitPoint]
+			curr.Data = nil
+			curr.FullPath = ""
 
-			newNode := &RadixNode{
-				Prefix: p[splitPoint:],
-				Data:   data,
+			if splitPoint < len(p) {
+				newNode := &RadixNode{
+					Prefix: p[splitPoint:],
+					Data:   data,
+					Child:  make(map[byte]*RadixNode),
+				}
+
+				curr.Child[p[splitPoint]] = newNode
+				return newNode
 			}
-			curr.Child[p[splitPoint]] = newNode
-			return newNode
+
+		}
+
+		if splitPoint == len(p) {
+			curr.Data = data
+			log.Println("Data at path: " + path + " is being overwritten.")
+			return curr
 		}
 
 		newNode := curr.Child[p[splitPoint]]
@@ -143,7 +195,7 @@ func (r *RadixNode) insert(p string, data any) *RadixNode {
 			return newNode
 		}
 
-		p = p[splitPoint+1:]
+		p = p[splitPoint:]
 		curr = newNode
 	}
 }
@@ -163,6 +215,77 @@ func longestCommonPrefix(s, p string) int {
 	return i
 }
 
-func (r *RadixNode) lookup(p string) (data any) {
-	panic("Unimplemented")
+func (r *RadixNode) lookup(p string) (*ProtocolContext, error) {
+	curr := r
+	result := &ProtocolContext{
+		Params: make(map[string]string),
+	}
+	for {
+		switch curr.Type {
+		case Static:
+			{
+				prefixLength := len(curr.Prefix)
+
+				if p[:prefixLength] != curr.Prefix {
+					return nil, errors.New("Path not found")
+				}
+
+				if prefixLength == len(p) {
+					goto exit
+				}
+
+				p = p[prefixLength:]
+			}
+		case Param:
+			{
+				parameter := curr.Prefix
+
+				valueSize := strings.IndexByte(p, '/')
+
+				value := p[:valueSize]
+
+				result.Params[parameter] = value
+
+				if valueSize == len(p) {
+					goto exit
+				}
+
+				p = p[valueSize:]
+			}
+		case Catch_all:
+			{
+				parameter := curr.Prefix
+
+				result.Params[parameter] = p
+
+				result.Data = curr.Data
+
+				return result, nil
+			}
+		default:
+			{
+				// NOTE: This is because an exhaustive matching should be done of node type
+				panic("This state should be unreachable")
+			}
+		}
+		new := curr.Child[p[0]]
+
+		if new == nil {
+			new = curr.Child[':']
+
+		}
+
+		if new == nil {
+			new = curr.Child['*']
+		}
+
+		if new == nil {
+			return nil, errors.New("Path not found")
+		}
+
+	}
+
+exit:
+	result.Data = curr.Data
+	return result, nil
 }

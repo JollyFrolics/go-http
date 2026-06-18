@@ -5,9 +5,27 @@ import (
 	"testing"
 )
 
-func TestRadixNode_addRoute(t *testing.T) {
+func assertPanics(t *testing.T, f func(), msg string) {
+	t.Helper()
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error(msg)
+		}
+	}()
+
+	f()
+}
+
+func TestRadixNode_insert(t *testing.T) {
+
 	tree := &RadixNode{}
-	_ = tree.insert("", 100)
+	assertPanics(
+		t, func() {
+			_ = tree.insert("", 100)
+
+		}, "Inserting empty string should panic didn't",
+	)
 
 	curr := tree.insert("/", 100)
 
@@ -51,7 +69,7 @@ func TestRadixNode_addRoute(t *testing.T) {
 		t.Error(colorize.Error("Expected data of 100 got"), curr.Data)
 	}
 
-	if tree.Child['/'] != curr {
+	if tree.Child['h'] != curr {
 		t.Error(colorize.Error("Expected maping to result in /home got: "), curr)
 	}
 
@@ -66,15 +84,56 @@ func TestRadixNode_addRoute(t *testing.T) {
 		t.Error(colorize.Error("Expected data of 100 got"), curr.Data)
 	}
 
-	if tree.Child['o'].Data != 200 {
+	if tree.Child['h'].Child['o'].Data != 200 {
 		t.Error(colorize.Error("Expected data of 200 got"), curr.Data)
 	}
 
-	if tree.Child['i'].Data != 300 {
+	if tree.Child['h'].Child['i'].Data != 300 {
 		t.Error(colorize.Error("Expected data of 300 got"), curr.Data)
 	}
 
-	if tree.Child['i'] != curr {
+	if tree.Child['h'].Child['i'] != curr {
 		t.Error(colorize.Error("Mapping of /, h, i is incorrect"), curr.Data)
+	}
+
+	root := &RadixNode{}
+
+	root.insert("abcd", "first")
+
+	root.insert("ab", "second")
+}
+
+
+func TestRadixNode_lookup(t *testing.T) {
+}
+
+func Test_longestCommonPrefix(t *testing.T) {
+	tests := []struct {
+		s    string
+		p    string
+		want int
+	}{
+		{"abcd", "abcd", 4},
+		{"abcd", "abef", 2},
+		{"abcd", "ab", 2},
+		{"ab", "abcd", 2},
+		{"abcd", "xyz", 0},
+		{"", "", 0},
+		{"abc", "", 0},
+		{"", "abc", 0},
+	}
+
+	for _, tt := range tests {
+		got := longestCommonPrefix(tt.s, tt.p)
+
+		if got != tt.want {
+			t.Errorf(
+				"longestCommonPrefix(%q,%q)=%d want %d",
+				tt.s,
+				tt.p,
+				got,
+				tt.want,
+			)
+		}
 	}
 }
