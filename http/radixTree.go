@@ -74,53 +74,73 @@ func (r *RadixNode) addRoute(path string, data any) {
 
 		wildcard, index := findWildcard(path)
 
+		// Static node
 		if index < 0 {
-			curr.insert(path, data)
+			curr = curr.insert(path, data)
 			curr.Type = Static
-			curr.Child = make(map[byte]*RadixNode)
+
 			break
 		}
 
+		// Static node
 		if index > 1 {
-			curr = curr.insert(path[:index], nil)
+			curr = curr.insert(path[:index-1], nil)
 			curr.Type = Static
+
+			new := curr.Child['/']
+			if new == nil {
+				curr.Child['/'] = &RadixNode{
+					Child: make(map[byte]*RadixNode),
+				}
+				new = curr.Child['/']
+			}
+
+			curr = new
 		}
 
+		// Param Node
 		if wildcard[0] == ':' {
 			// It already has a param ':' in the route
-			if curr.Child[':'] != nil {
-				log.Panic("Can't have two param in the same place" + curr.Child[':'].Prefix + ", " + wildcard + "at path: " + fullPath)
+			if curr.Type != Static {
+				if curr.Prefix != wildcard[1:] {
+					log.Panic("Can't have two param in the same place" + curr.Child[':'].Prefix + ", " + wildcard + "at path: " + fullPath)
+				}
 			}
 
-			curr.Child[':'] = &RadixNode{
-				Type:   Param,
-				Prefix: wildcard[1:],
-				Child:  make(map[byte]*RadixNode),
+			curr.insert(wildcard[1:], nil)
+			curr.Type = Param
+
+			if index+len(wildcard) == len(path) {
+				break
+			}
+			newNode := &RadixNode{
+				Child: make(map[byte]*RadixNode),
 			}
 
-			curr = curr.Child[':']
+			curr.Child['/'] = newNode
 
 			path = path[index+len(wildcard):]
+
+			curr = newNode
 
 			continue
 		}
 
-		if curr.Child['*'] != nil {
-			log.Panic("Can't have two catch all in the same place" + curr.Child[':'].Prefix + ", " + wildcard + "at path: " + fullPath)
+		// Catch-all Node
+		if curr.Type != Static {
+			if curr.Prefix != wildcard[1:] {
+				log.Panic("Can't have two catch all in the same place" + curr.Child[':'].Prefix + ", " + wildcard + "at path: " + fullPath)
+			}
 		}
 
-		curr.Child['*'] = &RadixNode{
-			Type:   Catch_all,
-			Prefix: wildcard[1:],
-			Child:  make(map[byte]*RadixNode),
-		}
+		curr = curr.insert(wildcard[1:], nil)
+		curr.Type = Catch_all
 
 		if index+len(wildcard) != len(path) {
 			log.Panicln("Wildcard should be the last element of the path")
 		}
 
 		break
-
 	}
 	curr.FullPath = fullPath
 	curr.Data = data
@@ -134,10 +154,12 @@ func (r *RadixNode) insert(path string, data any) *RadixNode {
 		log.Panicln("Error: empty string can't be inserted")
 	}
 
-	if curr.Prefix == "" && curr.Child == nil {
+	if curr.Prefix == "" {
 		curr.Prefix = p
 		curr.Data = data
-		curr.Child = make(map[byte]*RadixNode)
+		if curr.Child == nil {
+			curr.Child = make(map[byte]*RadixNode)
+		}
 		return curr
 	}
 
@@ -174,8 +196,10 @@ func (r *RadixNode) insert(path string, data any) *RadixNode {
 		}
 
 		if splitPoint == len(p) {
-			curr.Data = data
-			log.Println("Data at path: " + path + " is being overwritten.")
+			if data != nil {
+				curr.Data = data
+				log.Println("Data at path: " + path + " is being overwritten.")
+			}
 			return curr
 		}
 
@@ -184,7 +208,11 @@ func (r *RadixNode) insert(path string, data any) *RadixNode {
 		if newNode == nil {
 			newNode = &RadixNode{
 				Prefix: p[splitPoint:],
-				Data:   data,
+				Child:  make(map[byte]*RadixNode),
+			}
+
+			if data != nil {
+				newNode.Data = data
 			}
 
 			if curr.Child == nil {
@@ -238,10 +266,18 @@ func (r *RadixNode) lookup(p string) (*ProtocolContext, error) {
 			}
 		case Param:
 			{
+				// I want catch-all to return with the '/'
+				if p[0] == '/' {
+					p = p[1:]
+				}
+
 				parameter := curr.Prefix
 
 				valueSize := strings.IndexByte(p, '/')
 
+				if valueSize == -1 {
+					valueSize = len(p)
+				}
 				value := p[:valueSize]
 
 				result.Params[parameter] = value
@@ -271,17 +307,14 @@ func (r *RadixNode) lookup(p string) (*ProtocolContext, error) {
 		new := curr.Child[p[0]]
 
 		if new == nil {
-			new = curr.Child[':']
-
-		}
-
-		if new == nil {
-			new = curr.Child['*']
+			new = curr.Child['/']
 		}
 
 		if new == nil {
 			return nil, errors.New("Path not found")
 		}
+
+		curr = new
 
 	}
 
