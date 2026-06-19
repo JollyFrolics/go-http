@@ -19,6 +19,7 @@ type ServerState struct {
 	MaxPackageSize   int
 	MaxHeaderSize    int
 	MaxBodySize      int
+	Router           *Router
 }
 
 func (server *ServerState) HandleHTTPConnection(conn net.Conn) {
@@ -55,4 +56,3 @@ func (server *ServerState) HandleHTTPConnection(conn net.Conn) {
 	connection.HTTPParseBody(server)
 	fmt.Println("Connection Ended")
 }
-

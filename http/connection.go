@@ -13,8 +13,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type RequestHandler func(*ConnectionInfo)
-
 type ConnectionInfo struct {
 	Conn    net.Conn
 	Method  string
