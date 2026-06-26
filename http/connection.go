@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"net/url"
 	"strings"
 
 	"github.com/google/uuid"
@@ -17,12 +16,13 @@ type ConnectionInfo struct {
 	Conn    net.Conn
 	Method  string
 	Reader  *bufio.Reader
-	URL     *url.URL
+	URL     string
 	Version string
 	Headers map[string]string
 	Body    []byte
 	Id      uuid.UUID
 	Server  *ServerState
+	Handler *HTTPHandler
 }
 
 func (connection *ConnectionInfo) HTTPParseBody(server *ServerState) {
@@ -105,20 +105,31 @@ func (connection *ConnectionInfo) parseHTTPRequestLine() error {
 		return err
 	}
 
+	connection.Method = method;
+	connection.URL = path;
+	connection.Version = version;
+
+
+
 	if count != 3 {
 		return errors.New("Invalid Request Line")
 	}
 
-	connection.Method = method
+	nodeValue, err := connection.Server.Router.radixTree[connection.Method].lookup(connection.URL)
 
-	url, err := url.Parse(path)
 	if err != nil {
-		return err
+		// Handle Page not found
+		return nil
 	}
 
-	connection.URL = url
+	handler, ok := nodeValue.Data.(*HTTPHandler)
 
-	connection.Version = version
+	if !ok {
 
-	return nil
+		return errors.New("The data inserted into the radix tree is not a HTTPHandler")
+	}
+
+	connection.Handler = handler;
+
+	return nil;
 }

@@ -8,7 +8,7 @@ import (
 
 type NodeType uint8
 
-type ProtocolContext struct {
+type Context struct {
 	Data   any
 	Params map[string]string
 }
@@ -243,9 +243,9 @@ func longestCommonPrefix(s, p string) int {
 	return i
 }
 
-func (r *RadixNode) lookup(p string) (*ProtocolContext, error) {
+func (r *RadixNode) lookup(p string) (*Context, error) {
 	curr := r
-	result := &ProtocolContext{
+	result := &Context{
 		Params: make(map[string]string),
 	}
 	for {
