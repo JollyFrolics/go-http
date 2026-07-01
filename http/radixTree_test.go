@@ -1,7 +1,7 @@
 package http
 
 import (
-	"codeberg.org/JollyFrolics/go-http.git/colorize"
+	"codeberg.org/JollyFrolics/go-http/colorize"
 	"testing"
 )
 
