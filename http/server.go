@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/fs"
 	"log"
+	"maps"
 	"net"
 
 	"github.com/google/uuid"
@@ -76,9 +77,7 @@ func (server *ServerState) Handle(conn net.Conn) {
 
 	handler := reqContext.Data.(HTTPHandler)
 
-	for k, v := range reqContext.Params {
-		connectionContext.Params[k] = v
-	}
+	maps.Copy(connectionContext.Params, reqContext.Params)
 
 	handler(connectionContext)
 }
@@ -119,6 +118,6 @@ func (s *ServerState) PATCH(path string, handler RequestHandler) {
 	s.Router.addRoute("PATCH", path, handler)
 }
 
-func (s *ServerState) addRoute(method, path string, handler RequestHandler) {
+func (s *ServerState) AddRoute(method, path string, handler RequestHandler) {
 	s.Router.addRoute(method, path, handler)
 }
