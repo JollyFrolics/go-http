@@ -29,8 +29,11 @@ func Default() (server *ServerState) {
 			notFoundMsg := "HTTP/1.0 404 Not Found\r\nRequest URL: " + ctx.Path
 			ctx.Write([]byte(notFoundMsg))
 		},
-		Address: ":8000",
-		Router:  &Router{},
+		Address:        ":8000",
+		Router:         &Router{},
+		MaxPackageSize: -1,
+		MaxHeaderSize:  -1,
+		MaxBodySize:    -1,
 	}
 }
 
