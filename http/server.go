@@ -19,9 +19,10 @@ type ServerState struct {
 	MaxHeaderSize    int
 	MaxBodySize      int
 	Router           *Router
+	NotFoundHandler  HTTPHandler
 }
 
-func (server *ServerState) HandleHTTPConnection(conn net.Conn) {
+func (server *ServerState) Handle(conn net.Conn) {
 	defer conn.Close()
 	defer func() {
 		if r := recover(); r != nil {
@@ -45,14 +46,41 @@ func (server *ServerState) HandleHTTPConnection(conn net.Conn) {
 		connection.Reader = bufio.NewReader(io.LimitReader(conn, int64(server.MaxPackageSize)))
 	}
 
-	err := connection.HTTPParseHeader(server)
+	err := connection.ParseHeader(server)
 
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
-	connection.HTTPParseBody(server)
+	connection.ParseBody(server)
+
+	connectionContext := &HTTPContext{
+		ConnInfo: &connection,
+		server:   server,
+		Params:   connection.Headers,
+		Method:   connection.Method,
+		Path:     connection.URL,
+	}
+
+	tree, ok := server.Router.radixTree[connection.Method]
+	if !ok {
+		server.NotFoundHandler(connectionContext)
+		return
+	}
+
+	reqContext, err := tree.lookup(connectionContext.Path)
+	if err != nil {
+		server.NotFoundHandler(connectionContext)
+	}
+
+	handler := reqContext.Data.(HTTPHandler)
+
+	for k, v := range reqContext.Params {
+		connectionContext.Params[k] = v
+	}
+
+	handler(connectionContext)
 }
 
 func (s *ServerState) GET(path string, handler RequestHandler) {

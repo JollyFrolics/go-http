@@ -8,7 +8,7 @@ type Router struct {
 	conn *ConnectionInfo
 }
 
-type RequestHandler func(Context)
+type RequestHandler func(*ConnectionInfo)
 
 func (r *Router) addRoute(method, path string, handler RequestHandler) {
 	method = strings.ToLower(method)

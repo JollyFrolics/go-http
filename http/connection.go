@@ -25,7 +25,11 @@ type ConnectionInfo struct {
 	Handler *HTTPHandler
 }
 
-func (connection *ConnectionInfo) HTTPParseBody(server *ServerState) {
+func (connnection *ConnectionInfo) Write(res []byte) (n int, err error) {
+	return connnection.Conn.Write(res)
+}
+
+func (connection *ConnectionInfo) ParseBody(server *ServerState) {
 	if server.MaxBodySize == -1 {
 
 		return
@@ -41,8 +45,8 @@ func (connection *ConnectionInfo) HTTPParseBody(server *ServerState) {
 	connection.Body = data
 }
 
-func (connection *ConnectionInfo) HTTPParseHeader(server *ServerState) error {
-	err := connection.parseHTTPRequestLine()
+func (connection *ConnectionInfo) ParseHeader(server *ServerState) error {
+	err := connection.parseRequestLine()
 
 	if err != nil {
 		return err
@@ -85,7 +89,7 @@ func (connection *ConnectionInfo) HTTPParseHeader(server *ServerState) error {
 	return nil
 }
 
-func (connection *ConnectionInfo) parseHTTPRequestLine() error {
+func (connection *ConnectionInfo) parseRequestLine() error {
 
 	line, err := connection.Reader.ReadString('\r')
 
@@ -105,11 +109,9 @@ func (connection *ConnectionInfo) parseHTTPRequestLine() error {
 		return err
 	}
 
-	connection.Method = method;
-	connection.URL = path;
-	connection.Version = version;
-
-
+	connection.Method = method
+	connection.URL = path
+	connection.Version = version
 
 	if count != 3 {
 		return errors.New("Invalid Request Line")
@@ -129,7 +131,7 @@ func (connection *ConnectionInfo) parseHTTPRequestLine() error {
 		return errors.New("The data inserted into the radix tree is not a HTTPHandler")
 	}
 
-	connection.Handler = handler;
+	connection.Handler = handler
 
-	return nil;
+	return nil
 }
