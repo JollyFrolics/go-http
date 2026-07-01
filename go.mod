@@ -1,4 +1,4 @@
-module codeberg.org/JollyFrolics/go-http.git
+module codeberg.org/JollyFrolics/go-http
 
 go 1.26.2
 
