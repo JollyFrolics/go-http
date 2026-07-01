@@ -18,3 +18,7 @@ type HTTPContext struct {
 }
 
 type HTTPHandler func(ctx *HTTPContext)
+
+func (con *HTTPContext) Write(res []byte) (int, error) {
+	return con.ConnInfo.Write(res)
+}

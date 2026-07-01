@@ -23,6 +23,36 @@ type ServerState struct {
 	NotFoundHandler  HTTPHandler
 }
 
+func Default() (server *ServerState) {
+	return &ServerState{
+		NotFoundHandler: func(ctx *HTTPContext) {
+			notFoundMsg := "HTTP/1.0 404 Not Found\r\nRequest URL: " + ctx.Path
+			ctx.Write([]byte(notFoundMsg))
+		},
+		Address: ":8000",
+		Router:  &Router{},
+	}
+}
+
+func (server *ServerState) Start() {
+	ln, err := net.Listen("tcp", server.Address)
+
+	defer ln.Close()
+
+	if err != nil {
+		log.Println("Couldn't get port: ", err)
+	}
+
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			log.Println("Error accepting request: ", err)
+		}
+
+		go server.Handle(conn)
+	}
+}
+
 func (server *ServerState) Handle(conn net.Conn) {
 	defer conn.Close()
 	defer func() {
